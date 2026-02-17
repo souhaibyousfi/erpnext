@@ -75,7 +75,13 @@ typing-modules = ["frappe.types.DF"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "tab"
-docstring-code-format = true
+docstring-code-format = true 
+[tool.poetry]
+name = "erpnext"
+version = "14.0.0"
+description = "ERPNext custom build"
+authors = ["Your Name <you@example.com>"]
+
 
 
 [project.urls]
