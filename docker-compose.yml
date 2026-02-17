@@ -1,0 +1,99 @@
+version: "3.7"
+
+services:
+
+  # ==============================
+  # MariaDB: قاعدة البيانات
+  # ==============================
+  mariadb:
+    image: mariadb:10.3
+    container_name: erpnext-mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: erp1234root
+      MYSQL_DATABASE: erpnext
+      MYSQL_USER: erpuser
+      MYSQL_PASSWORD: erp1234
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  # ==============================
+  # Redis Cache, Queue, SocketIO
+  # ==============================
+  redis-cache:
+    image: redis:alpine
+    container_name: erpnext-redis-cache
+    restart: always
+
+  redis-queue:
+    image: redis:alpine
+    container_name: erpnext-redis-queue
+    restart: always
+
+  redis-socketio:
+    image: redis:alpine
+    container_name: erpnext-redis-socketio
+    restart: always
+
+  # ==============================
+  # إنشاء الموقع تلقائيًا
+  # ==============================
+  site-creator:
+    image: frappe/erpnext-worker:version-14
+    container_name: erpnext-site-creator
+    command: new
+    environment:
+      SITE_NAME: erp.mysupermarket.com
+      DB_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: erp1234root
+      ADMIN_PASSWORD: admin2026
+      INSTALL_APPS: erpnext
+    depends_on:
+      - mariadb
+      - redis-cache
+      - redis-queue
+      - redis-socketio
+
+  # ==============================
+  # NGINX — واجهة الويب
+  # ==============================
+  frappe-nginx:
+    image: frappe/erpnext-nginx:version-14
+    container_name: erpnext-nginx
+    ports:
+      - "8000:80"
+    depends_on:
+      - redis-cache
+      - redis-queue
+      - redis-socketio
+      - mariadb
+      - site-creator
+
+  # ==============================
+  # عامل العمل (Worker)
+  # ==============================
+  worker-default:
+    image: frappe/erpnext-worker:version-14
+    container_name: erpnext-worker-default
+    command: worker
+    depends_on:
+      - redis-cache
+      - redis-queue
+      - redis-socketio
+      - mariadb
+
+  # ==============================
+  # Scheduler — جدولة المهام
+  # ==============================
+  scheduler:
+    image: frappe/erpnext-worker:version-14
+    container_name: erpnext-scheduler
+    command: schedule
+    depends_on:
+      - redis-cache
+      - redis-queue
+      - redis-socketio
+      - mariadb
+
+volumes:
+  mariadb_data:
